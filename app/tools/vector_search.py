@@ -7,6 +7,9 @@ from langchain_qdrant import QdrantVectorStore, FastEmbedSparse, RetrievalMode
 from qdrant_client import QdrantClient
 
 
+# Disable HuggingFace tokenizers parallelism warnings (fork-safe)
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
 # Single collection and single vector store (simple, no wrappers)
 COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "uk_1996")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
@@ -52,10 +55,10 @@ def _format_docs(docs) -> str:
 
 
 @tool("search_uk_1996", return_direct=False)
-def search_uk_1996(query: str, top_k: int = 3) -> str:
+def search_uk_1996(query: str, top_k: int = 5) -> str:
     """
     Search within Qdrant collection 'uk_1996' (Уголовный кодекс РФ) using hybrid retrieval.
-    Returns concise citations with article and chapter context when available.
+    Returns full article text when available.
     """
     if not query or not query.strip():
         return "Query is empty."
@@ -72,8 +75,6 @@ if __name__ == "__main__":
 
     queries = [
         "мошенничество",
-        # "Статья 159",
-        # "тайное хищение чужого имущества",
     ]
     if len(sys.argv) > 1:
         queries = [" ".join(sys.argv[1:])]

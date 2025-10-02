@@ -1,6 +1,10 @@
+import os
 import asyncio
 from app.config import get_telegram_token
 from app.telegram_bot import run_bot
+
+# Disable HuggingFace tokenizers parallelism warnings
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 
 def main() -> None:
