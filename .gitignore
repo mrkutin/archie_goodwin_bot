@@ -1,0 +1,99 @@
+# OS / Editor
+.DS_Store
+._*
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+.cursor/
+.history/
+.direnv/
+
+# Python bytecode / artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.conda/
+conda-env/
+.python-version
+__pypackages__/
+
+# Packaging / distribution
+build/
+dist/
+wheels/
+*.egg-info/
+.eggs/
+
+# Installer logs
+pip-log.txt
+pip-wheel-metadata/
+pip-delete-this-directory.txt
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+.cache/
+.hypothesis/
+nosetests.xml
+coverage.xml
+htmlcov/
+
+# Type checking / linters / analyzers
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.pyre/
+.dmypy.json
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Logs
+logs/
+*.log
+
+# Local data / scratch (RAG indices, vector stores, temp)
+data/
+tmp/
+temp/
+cache/
+
+# Vector DB / embeddings stores
+.qdrant/
+qdrant_storage/
+chroma/
+faiss_index/
+langchain.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment variables and direnv
+.env
+.env.*
+!.env.example
+!.env.*.example
+.envrc
+
+# Certificates / keys
+*.pem
+*.crt
+*.key
+
+# Docker
+.docker/
+docker-volume/
+
+# Node (if used for tooling/UI)
+node_modules/
