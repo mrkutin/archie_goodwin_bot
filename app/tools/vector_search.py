@@ -5,6 +5,7 @@ from langchain.tools import tool
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_qdrant import QdrantVectorStore, FastEmbedSparse, RetrievalMode
 from qdrant_client import QdrantClient
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 
 
 # Disable HuggingFace tokenizers parallelism warnings (fork-safe)
@@ -69,18 +70,71 @@ def search_uk_1996(query: str, top_k: int = 5) -> str:
         return f"Search failed: {exc}"
 
 
+@tool("get_uk_1996_by_article", return_direct=False)
+def get_uk_1996_by_article(article_number: str) -> str:
+    """
+    Retrieve exact article by number from 'uk_1996' using metadata filter.
+    - article_number: e.g., "159"
+    Returns full article text with chapter/article titles when available.
+    """
+    if not article_number or not str(article_number).strip():
+        return "Article number is empty."
+    # Normalize to digits only (e.g., strip 'ст.' prefix, spaces)
+    digits = "".join(ch for ch in str(article_number) if ch.isdigit())
+    if not digits:
+        return "Article number must contain digits."
+    try:
+        # Some ingesters store metadata nested under "metadata.*"; also type may be str or int.
+        should_conditions = [
+            FieldCondition(key="metadata.article_number", match=MatchValue(value=digits)),
+        ]
+        # Also try numeric match
+        try:
+            num_val = int(digits)
+            should_conditions.extend(
+                [
+                    FieldCondition(key="metadata.article_number", match=MatchValue(value=num_val)),
+                ]
+            )
+        except Exception:
+            pass
+
+        flt = Filter(should=should_conditions)
+        # Use raw client scroll to avoid requiring a vector
+        points, _ = client.scroll(
+            collection_name=COLLECTION_NAME,
+            scroll_filter=flt,
+            with_payload=True,
+            limit=10,
+        )
+        if not points:
+            return "No article found with the specified number."
+        lines: List[str] = []
+        for idx, p in enumerate(points, start=1):
+            payload = p.payload or {}
+            meta = payload.get("metadata") or payload
+            chapter_title = meta.get("chapter_title") or ""
+            chapter_num = meta.get("chapter_number") or ""
+            article_title = meta.get("article_title") or ""
+            article_num = meta.get("article_number") or digits
+            content = payload.get("page_content") or payload.get("text") or ""
+            lines.append(
+                f"[{idx}]\n"
+                f"Глава: {chapter_title} (номер: {chapter_num})\n"
+                f"Статья: {article_title} (номер: {article_num})\n"
+                f"Содержание: {content}"
+            )
+        return "\n\n".join(lines)
+    except Exception as exc:
+        return f"Lookup failed: {exc}"
+
+
 if __name__ == "__main__":
-    # Minimal CLI test
-    import sys
-
-    queries = [
-        "мошенничество",
-    ]
-    if len(sys.argv) > 1:
-        queries = [" ".join(sys.argv[1:])]
-
+    # Hardcoded tests (no CLI args)
     print(f"Testing collection: {COLLECTION_NAME} at {QDRANT_URL}")
-    for q in queries:
-        print(f"\n== Query: {q}")
-        result = search_uk_1996.invoke({"query": q, "top_k": 3})
-        print(result)
+
+    # print("\n== Semantic query: мошенничество")
+    # print(search_uk_1996.invoke({"query": "мошенничество", "top_k": 3}))
+
+    print("\n== Article number lookup: 1")
+    print(get_uk_1996_by_article.invoke({"article_number": "1"}))
