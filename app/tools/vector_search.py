@@ -52,7 +52,7 @@ def _format_docs(docs) -> str:
 
 
 @tool("search_uk_1996", return_direct=False)
-def search_uk_1996(query: str, top_k: int = 5) -> str:
+def search_uk_1996(query: str, top_k: int = 3) -> str:
     """
     Search within Qdrant collection 'uk_1996' (Уголовный кодекс РФ) using hybrid retrieval.
     Returns concise citations with article and chapter context when available.
