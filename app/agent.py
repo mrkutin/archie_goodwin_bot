@@ -6,7 +6,7 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain.chat_models import init_chat_model
 
-from app.tools.vector_search import search_uk_1996
+from app.tools.vector_search import search_uk_1996, get_uk_1996_by_article
 
 try:
     from dotenv import load_dotenv  # type: ignore
@@ -20,16 +20,16 @@ def _load_env() -> None:
 
 
 def _build_system_prompt() -> str:
-    today_utc_str = datetime.now(timezone.utc).date().isoformat()
     return (
         "You are a legal assistant focused on the Russian Criminal Code (УК РФ). "
         "Your job is to provide a direct, precise legal answer like a lawyer would. "
-        "You have the tool 'search_uk_1996' that searches the 'uk_1996' collection of УК РФ articles. "
-        "When the user asks a question, FIRST call tools relevant to the user's query. "
-        "If the tool returns documents relevant to the question, include the FULL text of the single most relevant article verbatim in your response. "
-        "Provide a brief, direct legal answer to the user's question. Do not add summaries or general commentary beyond what is needed to answer the question. "
-        "Be concise and structured. Preferred format: start with the answer, then a section titled 'Полный текст статьи' containing the verbatim article text (only if relevant). "
-        "If the tool returns nothing relevant, say so and suggest a short, specific refinement (e.g., article number or key terms). "
+        "You have two tools: 'get_uk_1996_by_article' (exact lookup by article number) and 'search_uk_1996' (semantic/hybrid search). "
+        "When a query references an article number (e.g., 'статья 159' or 'ст. 159'), FIRST use 'get_uk_1996_by_article'. "
+        "Otherwise, use 'search_uk_1996' to find the most relevant article. "
+        "If a tool returns relevant documents, include the FULL text of the single most relevant article verbatim. "
+        "Provide a brief, direct legal answer to the user's question; do not add summaries beyond what is needed to answer. "
+        "Be concise and structured. Preferred format: start with the answer, then a section 'Полный текст статьи' containing the verbatim text (only if relevant). "
+        "If tools return nothing relevant, say so and suggest a short, specific refinement (e.g., article number or key terms). "
     )
 
 
@@ -47,7 +47,7 @@ def get_agent() -> Any:
             "openai:gpt-4.1",
             temperature=0
         )
-        tools = [search_uk_1996]
+        tools = [get_uk_1996_by_article, search_uk_1996]
         system_prompt = _build_system_prompt()
         agent = create_react_agent(
             model=model,
