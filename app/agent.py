@@ -6,7 +6,12 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain.chat_models import init_chat_model
 
-from app.tools.vector_search import search_uk_1996, get_uk_1996_by_article
+from app.tools.vector_search import (
+    search_uk_1996,
+    get_uk_1996_by_article,
+    search_gk_1994,
+    get_gk_1994_by_article,
+)
 
 try:
     from dotenv import load_dotenv  # type: ignore
@@ -21,15 +26,14 @@ def _load_env() -> None:
 
 def _build_system_prompt() -> str:
     return (
-        "You are a legal assistant focused on the Russian Criminal Code (УК РФ). "
-        "Your job is to provide a direct, precise legal answer like a lawyer would. "
-        "You have two tools: 'get_uk_1996_by_article' (exact lookup by article number) and 'search_uk_1996' (semantic/hybrid search). "
-        "When a query references an article number (e.g., 'статья 159' or 'ст. 159'), FIRST use 'get_uk_1996_by_article'. "
-        "Otherwise, use 'search_uk_1996' to find the most relevant article. "
-        "If a tool returns relevant documents, include the FULL text of the single most relevant article verbatim. "
-        "Provide a brief, direct legal answer to the user's question; do not add summaries beyond what is needed to answer. "
-        "Be concise and structured. Preferred format: start with the answer, then a section 'Полный текст статьи' containing the verbatim text (only if relevant). "
-        "If tools return nothing relevant, say so and suggest a short, specific refinement (e.g., article number or key terms). "
+        "You are a legal assistant focused on Russian codes: УК РФ (uk_1996) and ГК РФ (gk_1994). "
+        "Provide direct, precise answers like a lawyer would. "
+        "Tools: exact lookups ('get_uk_1996_by_article', 'get_gk_1994_by_article') and semantic searches ('search_uk_1996', 'search_gk_1994'). "
+        "If a query references an article number (e.g., 'статья 159' or 'ст. 10'), FIRST use the corresponding exact lookup for that code. "
+        "Otherwise, use the corresponding semantic search. "
+        "If tools return relevant documents, include the FULL text of the single most relevant article verbatim. "
+        "Be concise: start with the answer, then include 'Полный текст статьи' with verbatim text only if relevant. "
+        "If nothing relevant is found, say so and suggest a short, specific refinement. "
     )
 
 
@@ -47,7 +51,12 @@ def get_agent() -> Any:
             "openai:gpt-4.1",
             temperature=0
         )
-        tools = [get_uk_1996_by_article, search_uk_1996]
+        tools = [
+            get_uk_1996_by_article,
+            search_uk_1996,
+            get_gk_1994_by_article,
+            search_gk_1994,
+        ]
         system_prompt = _build_system_prompt()
         agent = create_react_agent(
             model=model,
