@@ -7,6 +7,12 @@ from langchain_qdrant import QdrantVectorStore, FastEmbedSparse, RetrievalMode
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 
+# Load .env early so QDRANT_* vars are available at import time
+try:
+    from dotenv import load_dotenv  # type: ignore
+    load_dotenv()  # type: ignore
+except Exception:
+    pass
 
 # Disable HuggingFace tokenizers parallelism warnings (fork-safe)
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -58,9 +64,9 @@ def _format_docs(docs) -> str:
 @tool("search_uk_1996", return_direct=False)
 def search_uk_1996(query: str, top_k: int = 5) -> str:
     """
-    Semantic hybrid search in Qdrant collection 'uk_1996' (Уголовный кодекс РФ).
+    Semantic hybrid search in Qdrant collection 'uk_1996' (Уголовный кодекс Российской Федерации).
 
-    - Use this for meaning-based queries (понятия, состав преступления, формулировки).
+    - Use for meaning-based queries (понятия, состав преступления, формулировки).
     - Returns up to top_k most relevant articles with full text and basic metadata.
 
     Args:
@@ -79,7 +85,7 @@ def search_uk_1996(query: str, top_k: int = 5) -> str:
 @tool("get_uk_1996_by_article", return_direct=False)
 def get_uk_1996_by_article(article_number: str) -> str:
     """
-    Exact lookup by article number in 'uk_1996' (Уголовный кодекс РФ).
+    Exact lookup by article number in 'uk_1996' (Уголовный кодекс Российской Федерации).
 
     - Use when the query references a specific article (e.g., "статья 159", "ст. 105").
     - Matches metadata.article_number (string or integer).

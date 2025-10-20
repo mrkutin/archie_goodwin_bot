@@ -6,7 +6,7 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain.chat_models import init_chat_model
 
-from app.tools.registry import ALL_TOOLS
+from app.tools.registry import ALL_TOOLS, _CODE_SPECS
 
 try:
     from dotenv import load_dotenv  # type: ignore
@@ -19,11 +19,29 @@ def _load_env() -> None:
         load_dotenv()  # type: ignore
 
 
+def _build_scope_line() -> str:
+    names: List[str] = [display for (_collection, display, _frac) in _CODE_SPECS]
+    return ", ".join(names)
+
+
+def _build_tool_map() -> str:
+    lines: List[str] = []
+    for collection, display, allow_fractional in _CODE_SPECS:
+        key = collection
+        exact = f"get_{key}_by_article"
+        search = f"search_{key}"
+        note = " (supports fractional numbers like 12.9)" if allow_fractional else ""
+        lines.append(f"- {display}{note}: {exact}; {search}")
+    return "\n".join(lines)
+
+
 def _build_system_prompt() -> str:
+    scope = _build_scope_line()
+    tool_map = _build_tool_map()
     return (
         "ROLE\n"
         "You are a precise legal assistant. Your scope covers: \n"
-        "- Арбитражный процессуальный\n"
+        f"- {scope}.\n\n"
         "POLICY\n"
         "1) First decide if the query references a specific article number for a particular code.\n"
         "   - If yes: use the exact-lookup tool for that code.\n"
@@ -38,7 +56,7 @@ def _build_system_prompt() -> str:
         "   under a section titled 'Полный текст статьи'. Only include this section if it clearly supports the answer.\n"
         "5) If nothing relevant is found, say so and suggest a short, specific refinement (e.g., article number or key terms).\n\n"
         "TOOL MAP (Code → exact lookup; semantic search)\n"
-        "- Арбитражный процессуальный кодекс РФ: get_apk_2002_by_article; search_apk_2002\n"
+        f"{tool_map}\n\n"
         "INPUT NORMALIZATION\n"
         "- When using exact-lookup tools, normalize article references: strip 'ст.'/'статья', spaces; keep digits (and dot for КоАП).\n\n"
         "ANSWER FORMAT\n"
@@ -64,6 +82,10 @@ def get_agent() -> Any:
         )
         tools = ALL_TOOLS
         system_prompt = _build_system_prompt()
+        if os.getenv("DEBUG_PROMPT"):
+            print("\n========== System Prompt ==========")
+            print(system_prompt)
+            print("========== End System Prompt ==========")
         agent = create_react_agent(
             model=model,
             tools=tools,
