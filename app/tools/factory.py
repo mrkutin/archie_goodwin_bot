@@ -3,14 +3,15 @@ from typing import Callable, Tuple
 
 from langchain.tools import tool
 from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 
-# Reuse initialized resources from vector_search
-from app.tools.vector_search import (
-    client,
+from app.tools.shared import (
+    client as default_client,
     dense_embeddings,
     sparse_embeddings,
     _format_docs,
+    QDRANT_URL,
 )
 
 
@@ -18,6 +19,12 @@ def _normalize_article_number(raw: str, allow_fractional: bool) -> str:
     if allow_fractional:
         return "".join(ch for ch in str(raw) if ch.isdigit() or ch == ".")
     return "".join(ch for ch in str(raw) if ch.isdigit())
+
+
+def _get_client(override_api_key: str | None, override_url: str | None) -> QdrantClient:
+    if override_api_key or override_url:
+        return QdrantClient(url=override_url or QDRANT_URL, api_key=override_api_key, prefer_grpc=True)
+    return default_client
 
 
 def create_code_tools(
@@ -36,16 +43,21 @@ def create_code_tools(
     exact_tool_name = f"get_{code_key}_by_article"
 
     @tool(search_tool_name, return_direct=False)
-    def search_tool(query: str, top_k: int = 5) -> str:  # type: ignore
+    def search_tool(query: str, top_k: int = 5, api_key: str | None = None, url: str | None = None) -> str:  # type: ignore
         """
         Semantic hybrid search in the given collection.
         Returns up to top_k most relevant articles with full text and basic metadata.
+
+        Optional overrides:
+        - api_key: Qdrant API key to use for this call
+        - url: Qdrant URL to use for this call
         """
         if not query or not str(query).strip():
             return "Query is empty."
         try:
+            qc = _get_client(api_key, url)
             store = QdrantVectorStore(
-                client=client,
+                client=qc,
                 collection_name=collection_name,
                 embedding=dense_embeddings,
                 sparse_embedding=sparse_embeddings,
@@ -59,11 +71,15 @@ def create_code_tools(
             return f"Search failed: {exc}"
 
     @tool(exact_tool_name, return_direct=False)
-    def exact_tool(article_number: str) -> str:  # type: ignore
+    def exact_tool(article_number: str, api_key: str | None = None, url: str | None = None) -> str:  # type: ignore
         """
         Exact lookup by article number in the given collection.
         Matches metadata.article_number (string or integer; fractional allowed if configured).
         Returns full article text with chapter/article titles when available.
+
+        Optional overrides:
+        - api_key: Qdrant API key to use for this call
+        - url: Qdrant URL to use for this call
         """
         if not article_number or not str(article_number).strip():
             return "Article number is empty."
@@ -84,7 +100,8 @@ def create_code_tools(
                 except Exception:
                     pass
             flt = Filter(should=should)
-            points, _ = client.scroll(
+            qc = _get_client(api_key, url)
+            points, _ = qc.scroll(
                 collection_name=collection_name,
                 scroll_filter=flt,
                 with_payload=True,
