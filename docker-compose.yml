@@ -1,0 +1,50 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"   # REST
+      - "6334:6334"   # gRPC
+    environment:
+      - QDRANT_ALLOW_RECOVERY_MODE=true
+      - QDRANT__SERVICE__API_KEY=
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "/usr/bin/curl", "-f", "http://localhost:6333/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: archie_goodwin_bot
+    depends_on: [qdrant]
+    environment:
+      # Required by app/config.py
+      TELEGRAM_BOT_TOKEN: ""
+
+      # Required by app/agent.py (OpenAI client)
+      OPENAI_API_KEY: ""
+
+      # Used in app/tools/shared.py
+      QDRANT_URL: "http://qdrant:6333"
+      QDRANT_API_KEY: ""  # keep empty for local qdrant
+      DENSE_EMBEDDINGS_MODEL: "ai-forever/FRIDA"
+      SPARSE_EMBEDDINGS_MODEL: "Qdrant/bm25"
+
+      # Optional debugging (read in app/agent.py)
+      DEBUG_PROMPT: ""
+      DEBUG_CONVERSATION: ""
+
+      # Suppress HF tokenizer parallelism warnings (also defaulted in code)
+      TOKENIZERS_PARALLELISM: "false"
+
+    command: ["python", "main.py"]
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
+
+

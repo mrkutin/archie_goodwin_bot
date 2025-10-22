@@ -4,8 +4,12 @@ from app.tools.factory import create_code_tools
 
 # Build tools for each code: (collection, display name, allow_fractional)
 _CODE_SPECS = [
-    ("APK-RF", "Арбитражный процессуальный кодекс РФ", False),
-    ("BK-RF", "Бюджетный кодекс РФ", False),
+    ("GK-RF", "Гражданский кодекс РФ", False),
+    ("KOAP-RF", "Кодекс об административных правонарушениях РФ", True),
+    ("SK-RF", "Семейный кодекс РФ", False),
+    ("TK-RF", "Трудовой кодекс РФ", False),
+    ("UK-RF", "Уголовный кодекс РФ", False),
+    ("ZHK-RF", "Жилищный кодекс РФ", False),
 ]
 
 ALL_TOOLS: List[object] = []

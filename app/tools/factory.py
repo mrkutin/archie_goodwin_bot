@@ -3,6 +3,11 @@ from typing import Callable, Tuple
 
 from langchain.tools import tool
 from langchain_qdrant import QdrantVectorStore
+try:
+    from langchain_qdrant.qdrant import RetrievalMode as QdrantRetrievalMode
+except Exception:  # pragma: no cover
+    class QdrantRetrievalMode:  # type: ignore
+        HYBRID = "hybrid"
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 
@@ -61,7 +66,7 @@ def create_code_tools(
                 collection_name=collection_name,
                 embedding=dense_embeddings,
                 sparse_embedding=sparse_embeddings,
-                retrieval_mode="HYBRID",
+                retrieval_mode=QdrantRetrievalMode.HYBRID,
                 vector_name="dense",
                 sparse_vector_name="sparse",
             )
